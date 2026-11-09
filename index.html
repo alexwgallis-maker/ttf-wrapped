@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta property="og:title" content="TTF Wrapped 2026">
+<meta property="og:description" content="One year of check-ins, punishments, and hard things that you're proud you did.">
+<title>TTF Wrapped 2026</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@400;600;700&display=swap">
+<style>
+/* Layout: one phone-shaped arcade cabinet screen, centred; slides stack inside it and you tap through them like stories. */
+:root{
+  --bg:#0f1126;        /* cabinet night */
+  --screen:#171a3a;    /* CRT glass */
+  --panel:#22265a;     /* HUD panels */
+  --ink:#f3f0ff;       /* phosphor white */
+  --dim:#9a9fd6;       /* secondary text */
+  --gold:#ffcf4a;      /* score yellow */
+  --coral:#ff6f61;     /* warden red */
+  --sky:#4cc3ff;       /* water / links */
+  --mint:#7ee8a2;      /* success */
+  --violet:#b48cff;
+  --f-hud:"Press Start 2P", ui-monospace, "Courier New", monospace;
+  --f-body:"Pixelify Sans", ui-rounded, system-ui, sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:18px;line-height:1.35;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:12px;box-sizing:border-box;display:flex;justify-content:center;align-items:center;overflow:hidden}
+*{box-sizing:border-box}
+canvas.px{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+
+.cab{position:relative;width:100%;max-width:440px;height:100%;max-height:860px;background:var(--screen);
+  border:4px solid var(--panel);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 0 0 4px var(--bg),0 0 40px rgba(76,195,255,.15)}
+.cab::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:30;
+  background:repeating-linear-gradient(to bottom,rgba(0,0,0,.18) 0 2px,transparent 2px 4px);mix-blend-mode:multiply}
+
+.bars{display:flex;gap:4px;padding:12px 14px 6px;z-index:5}
+.bars span{flex:1;height:5px;background:var(--panel);border-radius:2px;overflow:hidden}
+.bars span i{display:block;height:100%;width:0;background:var(--gold)}
+.bars span.done i{width:100%}
+.bars span.on i{width:100%;transition:width .35s steps(6)}
+
+.hudtop{display:flex;justify-content:space-between;align-items:center;padding:4px 16px 0;font-family:var(--f-hud);font-size:9px;color:var(--dim);letter-spacing:.08em}
+.hudtop b{color:var(--gold);font-weight:400}
+
+.stage{position:relative;flex:1;min-height:0;cursor:pointer;user-select:none;-webkit-user-select:none}
+.slide{position:absolute;inset:0;padding:18px 20px 12px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;
+  opacity:0;visibility:hidden;transition:opacity .25s steps(4)}
+.slide.on{opacity:1;visibility:visible}
+.slide.center{justify-content:center;align-items:center;text-align:center}
+
+.eyebrow{font-family:var(--f-hud);font-size:10px;letter-spacing:.12em;color:var(--sky);text-transform:uppercase}
+h1,h2{font-family:var(--f-hud);font-weight:400;margin:0;line-height:1.35;text-wrap:balance}
+h1{font-size:24px}
+h2{font-size:17px}
+.big{font-family:var(--f-hud);font-size:44px;line-height:1.1;color:var(--gold);font-variant-numeric:tabular-nums;text-shadow:4px 4px 0 var(--coral)}
+.big.sm{font-size:30px}
+p{margin:0;max-width:34ch}
+.lede{font-size:20px}
+.muted{color:var(--dim)}
+.gold{color:var(--gold)}.coral{color:var(--coral)}.sky{color:var(--sky)}.mint{color:var(--mint)}
+
+.rows{display:flex;flex-direction:column;gap:8px;width:100%}
+.row{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:baseline;padding:8px 10px;background:var(--panel);border-radius:4px;font-size:17px}
+.row .n{font-family:var(--f-hud);font-size:10px;color:var(--dim)}
+.row .v{font-family:var(--f-hud);font-size:11px;color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap}
+.row.first{outline:2px solid var(--gold)}
+.row .who{min-width:0}
+.row .who small{display:block;color:var(--dim);font-size:14px}
+
+.stats3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
+.tile{background:var(--panel);border-radius:4px;padding:12px 8px;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center}
+.tile b{font-family:var(--f-hud);font-weight:400;font-size:13px;color:var(--gold);font-variant-numeric:tabular-nums}
+.tile span{font-size:14px;color:var(--dim)}
+
+.track{position:relative;width:100%;height:120px}
+.track canvas.mtn{position:absolute;left:0;bottom:22px;width:100%;height:70px}
+.track .runner{position:absolute;bottom:22px;left:0;width:36px;transition:left 1.6s steps(24)}
+.meter{position:absolute;left:0;right:0;bottom:0;height:16px;background:var(--panel);border:2px solid var(--ink)}
+.meter i{display:block;height:100%;width:100%;background:repeating-linear-gradient(90deg,var(--mint) 0 10px,#5fcf86 10px 12px);transition:width 1.6s steps(24)}
+
+.stages{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%}
+.stg{background:var(--panel);border-radius:4px;padding:8px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.stg .id{font-family:var(--f-hud);font-size:8px;color:var(--sky)}
+.stg .t{font-size:15px;font-weight:600;line-height:1.15}
+.stg .w{font-size:13px;color:var(--gold);line-height:1.2}
+
+.boss{display:flex;flex-direction:column;align-items:center;gap:10px}
+.hp{width:220px;max-width:100%;display:flex;flex-direction:column;gap:4px;font-family:var(--f-hud);font-size:8px;color:var(--coral)}
+.hp div{height:12px;border:2px solid var(--ink);background:var(--bg)}
+.hp div i{display:block;height:100%;width:100%;background:var(--coral)}
+
+.attacks{display:flex;flex-direction:column;gap:8px;width:100%}
+.atk{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;background:var(--panel);border-left:4px solid var(--coral);border-radius:2px;padding:8px 10px}
+.atk .dmg{font-family:var(--f-hud);font-size:9px;color:var(--coral);padding-top:4px;white-space:nowrap}
+.atk .t{font-weight:600}
+.atk .d{font-size:15px;color:var(--dim)}
+
+.finish{display:flex;flex-direction:column;gap:6px;width:100%}
+.fin{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 10px;background:var(--panel);border-radius:4px}
+.fin .e{font-size:16px;line-height:1.2;min-width:0}
+.fin .e small{display:block;color:var(--dim);font-size:13px}
+.fin .tm{font-family:var(--f-hud);font-size:11px;color:var(--gold);white-space:nowrap}
+
+.ups{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+.up{background:var(--panel);border-radius:4px;padding:10px;display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:0}
+.up .t{font-weight:700;font-size:16px;line-height:1.15}
+.up .d{font-size:14px;color:var(--dim);line-height:1.2}
+
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%}
+.pl{appearance:none;border:2px solid var(--panel);background:var(--panel);color:var(--ink);border-radius:4px;padding:8px 2px 6px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;font-family:var(--f-body);font-size:13px;cursor:pointer;min-width:0}
+.pl:hover,.pl:focus-visible{border-color:var(--gold);outline:none}
+.pl span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl.locked{opacity:.45;cursor:default}
+.pl.locked:hover{border-color:var(--panel)}
+
+.credits{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 12px;font-size:17px;max-width:34ch}
+.credits span:nth-child(3n+1){color:var(--sky)}.credits span:nth-child(3n+2){color:var(--mint)}.credits span:nth-child(3n){color:var(--violet)}
+
+.blink{animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+.press{font-family:var(--f-hud);font-size:12px;color:var(--gold)}
+.count{font-family:var(--f-hud);font-size:56px;color:var(--coral)}
+
+.nav{display:flex;justify-content:space-between;align-items:center;padding:8px 14px 12px;gap:8px;z-index:5}
+.btn{appearance:none;font-family:var(--f-hud);font-size:10px;color:var(--ink);background:var(--panel);border:2px solid var(--ink);border-radius:4px;padding:10px 12px;cursor:pointer;box-shadow:3px 3px 0 var(--bg)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--bg)}
+.btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.btn[disabled]{opacity:.35;cursor:default}
+.hint{font-size:13px;color:var(--dim);text-align:center}
+
+/* player card */
+.card{position:absolute;inset:0;z-index:20;background:var(--screen);padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+.card[hidden]{display:none}
+.card .top{display:flex;gap:14px;align-items:center}
+.card .top canvas{flex:none}
+.card .nm{font-family:var(--f-hud);font-size:18px;line-height:1.3}
+.card .cls{font-size:15px;color:var(--dim)}
+.card .cls b{color:var(--gold);font-weight:600}
+.card .box{background:var(--panel);border-radius:4px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.card .lbl{font-family:var(--f-hud);font-size:8px;letter-spacing:.1em;color:var(--sky)}
+.card .q{font-size:17px;font-style:italic}
+.sbar{display:grid;grid-template-columns:92px 1fr 52px;gap:8px;align-items:center;font-size:14px}
+.sbar div{height:10px;background:var(--bg);border:1px solid var(--dim)}
+.sbar div i{display:block;height:100%;background:var(--mint)}
+.sbar b{font-family:var(--f-hud);font-size:9px;font-weight:400;color:var(--gold);text-align:right}
+.card .acts{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:auto;flex-wrap:wrap}
+
+@media (prefers-reduced-motion:reduce){
+  .blink{animation:none}
+  .slide,.track .runner,.meter i,.bars span.on i{transition:none}
+}
+@media (max-height:640px){h1{font-size:19px}.big{font-size:34px}.slide{gap:10px}}
+</style>
+</head>
+<body>
+
+<div class="cab" id="cab">
+  <div class="bars" id="bars" aria-hidden="true"></div>
+  <div class="hudtop"><span>TTF WRAPPED</span><span>1UP <b id="lvl">01</b>/<b id="tot">16</b></span></div>
+
+  <div class="stage" id="stage" aria-live="polite">
+
+    <!-- 0 title -->
+    <section class="slide center on" data-s="0">
+      <canvas class="px" data-sprite="player" data-pal="alex" data-anim="run" data-scale="8"></canvas>
+      <div class="eyebrow">Type Two Fun</div>
+      <h1>WRAPPED<br><span class="gold">2026</span></h1>
+      <p class="lede">One year of check-ins, punishments, and hard things that you're proud you did.</p>
+      <div class="press blink">TAP TO START</div>
+    </section>
+
+    <!-- 1 players -->
+    <section class="slide center" data-s="1">
+      <div class="eyebrow">Player count</div>
+      <div class="big" data-count="28">28</div>
+      <h2>players checked in</h2>
+      <p class="muted">Winter Arc started it all on November 1, 2025 with 6 guys and continued to grow from there.</p>
+      <canvas class="px" data-sprite="crowd" data-scale="4"></canvas>
+    </section>
+
+    <!-- 2 scoreboard -->
+    <section class="slide center" data-s="2">
+      <div class="eyebrow">Scoreboard · 2026</div>
+      <div class="big sm" data-count="10461">10,461</div>
+      <h2>messages sent</h2>
+      <div class="stats3">
+        <div class="tile"><canvas class="px" data-sprite="star" data-scale="3"></canvas><b data-count="11189">11,189</b><span>photos &amp; files. Receipts culture.</span></div>
+        <div class="tile"><canvas class="px" data-sprite="heart" data-scale="3"></canvas><b data-count="24891">24,891</b><span>reactions given</span></div>
+        <div class="tile"><canvas class="px" data-sprite="flame" data-scale="3"></canvas><b>JAN</b><span>busiest month: 1,459 messages</span></div>
+      </div>
+    </section>
+
+    <!-- 3 peak hour -->
+    <section class="slide center" data-s="3">
+      <canvas class="px" data-sprite="moon" data-scale="9"></canvas>
+      <div class="eyebrow">Peak check-in hour</div>
+      <div class="big">9 PM</div>
+      <p class="lede">1,841 messages landed in the 9 o'clock hour. Another 472 came in after midnight.</p>
+      <p class="muted">Monday is the busiest day. Saturday is when everyone touches grass.</p>
+    </section>
+
+    <!-- 4 high scores -->
+    <section class="slide" data-s="4">
+      <div class="eyebrow">High scores · longest daily streak</div>
+      <h2>The streak is the story.</h2>
+      <div class="rows">
+        <div class="row first"><span class="n">1ST</span><span class="who">Alex<small>Mar 15 – Jul 31</small></span><span class="v">139 DAYS</span></div>
+        <div class="row"><span class="n">2ND</span><span class="who">Eric</span><span class="v">90 DAYS</span></div>
+        <div class="row"><span class="n">3RD</span><span class="who">Lloyd</span><span class="v">77 DAYS</span></div>
+        <div class="row"><span class="n">4TH</span><span class="who">Clark</span><span class="v">55 DAYS</span></div>
+        <div class="row"><span class="n">5TH</span><span class="who">Keenan</span><span class="v">45 DAYS</span></div>
+        <div class="row"><span class="n">6TH</span><span class="who">Chris</span><span class="v">40 DAYS</span></div>
+      </div>
+      <p class="muted">Most days posted overall: Alex (304), then Ben (289).</p>
+    </section>
+
+    <!-- 5 level 1 winter arc -->
+    <section class="slide center" data-s="5">
+      <div class="eyebrow">Level 1</div>
+      <h1>WINTER ARC</h1>
+      <canvas class="px" data-sprite="snow" data-scale="5"></canvas>
+      <p class="lede">Nov 1, 2025. Kamloops. A handful of people decided winter wasn't an excuse.</p>
+      <p>370+ days later it's still running. To close out the first month, the Warden set a challenge: <span class="gold">4,000 reps in one week</span>, made up of push-ups, sit-ups, squats, swimmers and back hypers.</p>
+      <p class="muted">Clark finished it on Nov 30 with 1,195 sit-ups, 915 squats, 778 push-ups, 680 swimmers and 432 back hypers.</p>
+    </section>
+
+    <!-- 6 run across BC -->
+    <section class="slide" data-s="6">
+      <div class="eyebrow">Level 2 · April team challenge</div>
+      <h2>RUN ACROSS BC</h2>
+      <div class="track" id="track">
+        <canvas class="mtn" id="mtn" width="200" height="70"></canvas>
+        <canvas class="px runner" data-sprite="player" data-pal="chris" data-anim="run" data-scale="3"></canvas>
+        <div class="meter"><i id="meter"></i></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+        <span class="big sm" style="font-size:22px">1,139.93 KM</span><span class="muted">goal 1,100</span>
+      </div>
+      <div class="rows">
+        <div class="row first"><span class="n">1ST</span><span class="who">Chris<small>Top male</small></span><span class="v">230.13</span></div>
+        <div class="row"><span class="n">2ND</span><span class="who">Riley</span><span class="v">130.00</span></div>
+        <div class="row"><span class="n">3RD</span><span class="who">Clark</span><span class="v">125.40</span></div>
+        <div class="row"><span class="n">4TH</span><span class="who">Alex</span><span class="v">119.96</span></div>
+        <div class="row"><span class="n">7TH</span><span class="who">Arielle<small>Top female</small></span><span class="v">75.60</span></div>
+      </div>
+    </section>
+
+    <!-- 7 stage select -->
+    <section class="slide" data-s="7">
+      <div class="eyebrow">Stage select · 11 challenges</div>
+      <div class="stages">
+        <div class="stg"><span class="id">#001</span><span class="t">225 Grip Test</span><span class="w">Nick · 1:29</span></div>
+        <div class="stg"><span class="id">#002</span><span class="t">Reverse Drop-Set</span><span class="w">Lloyd · 40 lb × 36</span></div>
+        <div class="stg"><span class="id">#003</span><span class="t">Run Across BC</span><span class="w">Team · 1,139.93 km</span></div>
+        <div class="stg"><span class="id">#004</span><span class="t">Ride the Rack</span><span class="w">Arielle &amp; Nick led</span></div>
+        <div class="stg"><span class="id">#005</span><span class="t">Ankle Dorsiflexion</span><span class="w">Tibialises-es worked</span></div>
+        <div class="stg"><span class="id">#006</span><span class="t">Do Something Hard</span><span class="w">Lloyd swam 6 km</span></div>
+        <div class="stg"><span class="id">#007</span><span class="t">Bodyweight Squats</span><span class="w">Ben · 43 reps</span></div>
+        <div class="stg"><span class="id">#008</span><span class="t">Mid-Year Reflection</span><span class="w">Everyone is a winner here</span></div>
+        <div class="stg"><span class="id">#009</span><span class="t">Spanish Only</span><span class="w">Clark &amp; Lorena · 2 months</span></div>
+        <div class="stg"><span class="id">#010</span><span class="t">Rose Hill Run</span><span class="w">Hills found</span></div>
+        <div class="stg"><span class="id">#011</span><span class="t">20 Min Meditation</span><span class="w">Clark</span></div>
+        <div class="stg"><span class="id">#012</span><span class="t">???</span><span class="w">Coming in 2027</span></div>
+      </div>
+    </section>
+
+    <!-- 8 boss -->
+    <section class="slide center" data-s="8">
+      <div class="eyebrow" style="color:var(--coral)">Warning · boss approaching</div>
+      <div class="boss">
+        <canvas class="px" data-sprite="warden" data-anim="float" data-scale="9"></canvas>
+        <div class="hp">THE WARDEN<div><i></i></div></div>
+      </div>
+      <p class="lede">"Punish" was said <span class="coral">624</span> times this year.</p>
+      <p class="muted">Punishments counted: 78. Punishments regretted: 0.</p>
+    </section>
+
+    <!-- 9 attacks -->
+    <section class="slide" data-s="9">
+      <div class="eyebrow" style="color:var(--coral)">The Warden's greatest hits</div>
+      <div class="attacks">
+        <div class="atk"><span class="dmg">-999</span><div><div class="t">4,000 Reps in a Week</div><div class="d">The original Warden's Challenge, Nov 2025.</div></div></div>
+        <div class="atk"><span class="dmg">-640</span><div><div class="t">No Shopping April</div><div class="d">Alicia. A full month. Mostly.</div></div></div>
+        <div class="atk"><span class="dmg">-480</span><div><div class="t">The Open Water Swim</div><div class="d">Alicia again. "Only a liddle afraid of the monsters in the lake."</div></div></div>
+        <div class="atk"><span class="dmg">-350</span><div><div class="t">16k-Step Days</div><div class="d">Chantal, walking it off.</div></div></div>
+        <div class="atk"><span class="dmg">-350</span><div><div class="t">3.5 L of Water a Day</div><div class="d">Pam. A bottle every three hours, 9 AM to 9 PM.</div></div></div>
+        <div class="atk"><span class="dmg">-200</span><div><div class="t">The 2 AM Run</div><div class="d">Lloyd joined Arielle's punishment. Then a cold shower.</div></div></div>
+      </div>
+      <p class="muted">Best counterattack, from Chantal: "Can we punish the Warden for forgetting to punish us?"</p>
+    </section>
+
+    <!-- 10 finish lines -->
+    <section class="slide" data-s="10">
+      <div class="eyebrow">Finish lines</div>
+      <div class="finish">
+        <div class="fin"><span class="e">Clark · first marathon<small>Mar 1 · Lloyd ran every km beside him</small></span><span class="tm">~4:47</span></div>
+        <div class="fin"><span class="e">Chris · half marathon PR<small>Apr 26</small></span><span class="tm">1:33:21</span></div>
+        <div class="fin"><span class="e">Lloyd · 6 km swim<small>May · double his longest ever</small></span><span class="tm">6 KM</span></div>
+        <div class="fin"><span class="e">Alex · Ironman 70.3 Victoria<small>May 24 · sub-6 goal</small></span><span class="tm">5:58</span></div>
+        <div class="fin"><span class="e">Alicia · first open-water swim<small>Jun 21 · monsters in the lake and all</small></span><span class="tm">700 M</span></div>
+        <div class="fin"><span class="e">Pam · longest run ever<small>Jul 5 · run club, four months postpartum</small></span><span class="tm">4.5 KM</span></div>
+        <div class="fin"><span class="e">Lorena · Vancouver Relay Triathlon<small>Swim leg · an amazing pace</small></span><span class="tm">1.5 KM</span></div>
+        <div class="fin"><span class="e">Arielle · Spartan Beast<small>Aug 9 · 25 km, cramps from km 21</small></span><span class="tm">DONE</span></div>
+        <div class="fin"><span class="e">Chris · Kelowna marathon<small>Sep 27 · a 10-minute PR</small></span><span class="tm">3:18:44</span></div>
+        <div class="fin"><span class="e">Alex &amp; Nick · first 50 km ultra<small>Oct 17 · TCC track, Kamloops</small></span><span class="tm">7:00</span></div>
+        <div class="fin"><span class="e">CaptRick · 5 km<small>Second-fastest ever</small></span><span class="tm">19:49</span></div>
+      </div>
+    </section>
+
+    <!-- 11 TTF tri -->
+    <section class="slide center" data-s="11">
+      <div class="eyebrow">Bonus level · Aug 2</div>
+      <h1>THE FIRST<br>TTF TRIATHLON</h1>
+      <div style="display:flex;gap:10px;align-items:flex-end;justify-content:center">
+        <canvas class="px" data-sprite="wave" data-scale="4"></canvas>
+        <canvas class="px" data-sprite="bike" data-scale="4"></canvas>
+        <canvas class="px" data-sprite="shoe" data-scale="4"></canvas>
+      </div>
+      <div class="big sm">6</div>
+      <h2>finishers</h2>
+      <p>Nick, Clark, Chris, Lloyd and two first-timers from outside TTF. Hosted by Alex and Nick, with Arielle, Pam, Lorena, and Clark volunteering.</p>
+      <p class="muted">Chris's lesson: "Nutrition is the secret 4th sport of the triathlon."</p>
+    </section>
+
+    <!-- 12 life level ups -->
+    <section class="slide" data-s="12">
+      <div class="eyebrow">Life level-ups</div>
+      <h2>Not everything hard happens in a gym.</h2>
+      <div class="ups">
+        <div class="up"><canvas class="px" data-sprite="bottle" data-scale="3"></canvas><span class="t">Wil arrives</span><span class="d">Pam and Nick, March</span></div>
+        <div class="up"><canvas class="px" data-sprite="bottle" data-scale="3"></canvas><span class="t">Sam arrives</span><span class="d">Lloyd and Kaela, Apr 5</span></div>
+        <div class="up"><canvas class="px" data-sprite="bottle" data-scale="3"></canvas><span class="t">Ronan arrives</span><span class="d">Ben and Marizza, October</span></div>
+        <div class="up"><canvas class="px" data-sprite="ring" data-scale="3"></canvas><span class="t">Clark &amp; Lorena marry</span><span class="d">Aug 22. "Wedding day best day ever."</span></div>
+        <div class="up"><canvas class="px" data-sprite="star" data-scale="3"></canvas><span class="t">Thesis proposal</span><span class="d">Lorena, presented to her committee</span></div>
+        <div class="up"><canvas class="px" data-sprite="medal" data-scale="3"></canvas><span class="t">Course passed</span><span class="d">CaptRick, plus a new job</span></div>
+      </div>
+    </section>
+
+    <!-- 13 choose player -->
+    <section class="slide" data-s="13">
+      <div class="eyebrow">Choose your player</div>
+      <h2>Tap a player to see their year.</h2>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <!-- 14 credits -->
+    <section class="slide center" data-s="14">
+      <div class="eyebrow">Also starring</div>
+      <div class="credits">
+        <span>Nicole</span><span>Keenan</span><span>Shane</span><span>Olivia</span><span>brando</span><span>MuskyMeerkat</span><span>_calidrid_</span><span>Alex B.</span><span>brittney p</span><span>Pippa</span><span>MaddBra</span><span>Ashley</span><span>Dee</span><span>Salt Sauce</span><span>Jimmy</span><span>Riley</span><span>Pat</span>
+      </div>
+      <p class="muted">Nicole gave us the word "TTFers." Keenan put 87 km into Run Across BC. Every check-in counted.</p>
+    </section>
+
+    <!-- 15 continue -->
+    <section class="slide center" data-s="15">
+      <div class="eyebrow">Game over? No.</div>
+      <h1>CONTINUE?</h1>
+      <div class="count" id="count">10</div>
+      <p class="lede">Year Two starts now. New goals, same Warden.</p>
+      <div class="press blink">PRESS START</div>
+      <p class="muted">Screenshot your player card, post it to your Story and tag @ttf.team. Know someone who should be on next year's Wrapped? Bring them into the Discord.</p>
+    </section>
+  </div>
+
+  <div class="card" id="card" hidden role="dialog" aria-modal="true" aria-labelledby="cName">
+    <div class="eyebrow">Player card · 2026</div>
+    <div class="top"><canvas class="px" id="cSprite"></canvas>
+      <div><div class="nm" id="cName"></div><div class="cls">CLASS: <b id="cClass"></b></div></div></div>
+    <div class="box"><span class="lbl">SPECIAL MOVE</span><div id="cWin"></div></div>
+    <div class="box"><span class="lbl">QUOTE OF THE YEAR</span><div class="q" id="cQuote"></div></div>
+    <div class="box" id="cStats"><span class="lbl">2026 STATS</span></div>
+    <div class="acts"><span class="hint">Screenshot this card and tag @ttf.team</span><button class="btn" id="cBack" type="button">BACK</button></div>
+  </div>
+
+  <div class="nav">
+    <button class="btn" id="prev" type="button" aria-label="Previous slide">◀ BACK</button>
+    <span class="hint">tap or use arrow keys</span>
+    <button class="btn" id="next" type="button" aria-label="Next slide">NEXT ▶</button>
+  </div>
+</div>
+
+<script>
+(function(){
+const C={Y:'#ffcf4a',R:'#ff6f61',B:'#4cc3ff',W:'#f3f0ff',G:'#7ee8a2',K:'#2b1f3d',D:'#0b0a14',E:'#ff3b3b',V:'#9be7ff',P:'#3a3f7a',O:'#f3f0ff',N:'#8f6b3e',L:'#b48cff',T:'#c9c3e6'};
+const S={
+player:["..HHHHHH..",".HHHHHHHH.",".HVVVVVVH.",".HVVVVVVH.",".HHHHHHHH.","..AAAAAA..",".SSSSSSSS.","SSSSSSSSSS","S.SSSSSS.S","..SSSSSS..","..PP..PP..","..PP..PP..","..OO..OO.."],
+player2:["..HHHHHH..",".HHHHHHHH.",".HVVVVVVH.",".HVVVVVVH.",".HHHHHHHH.","..AAAAAA..",".SSSSSSSS.","SSSSSSSSS.","..SSSSSSS.","..SSSSSS..",".PP...PP..","PP.....PP.","OO.....OO."],
+warden:[".....KKKKKK.....","....KKKKKKKK....","...KKKKKKKKKK...","..KKKDDDDDDKKK..","..KKDDDDDDDDKK..","..KKDEEDDEEDKK..","..KKDDDDDDDDKK..","..KKKDDDDDDKKK..",".KKKKKKKKKKKKKK.","KKKKKKKKKKKKKKKK","KKK.KKKKKKKK.KKK","KK..KKKKKKKK..KK","K...KKKKKKKK...K","....KKKKKKKK....","....KKK..KKK....","....KKK..KKK...."],
+star:["....Y....","....Y....","...YYY...","YYYYYYYYY",".YYYYYYY.","..YYYYY..","..YY.YY..",".YY...YY."],
+heart:[".RR...RR.","RRRR.RRRR","RRRRRRRRR","RRRRRRRRR",".RRRRRRR.","..RRRRR..","...RRR...","....R...."],
+flame:["...R....","...RR...","..RRR...","..RYRR..",".RRYYRR.",".RYYYYR.","RRYWWYRR","RYYWWYYR",".RYYYYR.","..RRRR.."],
+moon:["..YYYY..",".YYY....","YYY.....","YYY.....","YYY.....","YYY.....",".YYY....","..YYYY.."],
+ring:["...WWW...","....W....","..YYYYY..",".Y.....Y.","Y.......Y","Y.......Y","Y.......Y",".Y.....Y.","..YYYYY.."],
+bottle:["..WW..","..WW..",".BBBB.",".WWWW.",".WTWW.",".WWWW.",".WTWW.",".WWWW.","..WW.."],
+medal:["RR....BB",".RR..BB.","..RRBB..","...RB...","..YYYY..",".YYYYYY.","YYYWWYYY","YYYWWYYY",".YYYYYY.","..YYYY.."],
+dumbbell:["GG........GG","GG........GG","GGGGGGGGGGGG","GGGGGGGGGGGG","GG........GG","GG........GG"],
+shoe:["..RRR.....","..RRR.....","..RRRRRR..",".RRRRRRRRR","WWWWWWWWWW"],
+wave:["..BB....BB..",".B..B..B..B.","B....BB....B","............","..BB....BB..",".B..B..B..B.","B....BB....B"],
+bike:[".......YY...","........Y...","..B.YYYYY...",".B.B..Y.Y...","BBBBB.YBBB..","B.Y.BY.B.B..","B..YB..B..B.",".BBB....BBB."],
+lightning:["...YYYY","..YYYY.","..YYY..",".YYYYYY","...YYY.","..YYY..","..YY...",".YY....",".Y.....","Y......"],
+drop:["...B...","...B...","..BBB..",".BBBBB.","BBBWBBB","BBWBBBB","BBBBBBB",".BBBBB.","..BBB.."],
+check:["........G",".......GG","G.....GG.","GG...GG..",".GG.GG...","..GGG....","...G....."],
+snow:["....W....",".W..W..W.","..W.W.W..","...WWW...","WWWWWWWWW","...WWW...","..W.W.W..",".W..W..W.","....W...."],
+lock:["..TTTT..",".T....T.",".T....T.","YYYYYYYY","YYYDDYYY","YYYDDYYY","YYYYYYYY"],
+crowd:[]
+};
+// players: helmet, visor accent, shirt colours (all original sprites)
+const PAL={alex:{H:'#ffcf4a',S:'#ff6f61',A:'#f3f0ff'},lloyd:{H:'#3a3f7a',S:'#7ee8a2',A:'#ffcf4a'},clark:{H:'#b48cff',S:'#4cc3ff',A:'#f3f0ff'},chris:{H:'#ff6f61',S:'#ffcf4a',A:'#3a3f7a'},nick:{H:'#7ee8a2',S:'#b48cff',A:'#f3f0ff'},eric:{H:'#ff9f43',S:'#3a3f7a',A:'#ff6f61'},arielle:{H:'#ff7eb6',S:'#ff6f61',A:'#ffcf4a'},ben:{H:'#4cc3ff',S:'#2b1f3d',A:'#7ee8a2'},captrick:{H:'#6b8f3e',S:'#c9c3e6',A:'#2b1f3d'},chantal:{H:'#ffd6f0',S:'#b48cff',A:'#ff7eb6'},lorena:{H:'#ffcf4a',S:'#4cc3ff',A:'#ff7eb6'},pam:{H:'#9be7ff',S:'#ff7eb6',A:'#f3f0ff'},alicia:{H:'#ffb400',S:'#2b1f3d',A:'#ffcf4a'}};
+
+function draw(cv,name,pal,scale){
+  const g=S[name]; if(!g||!g.length) return;
+  const w=Math.max(...g.map(r=>r.length)),h=g.length;
+  cv.width=w;cv.height=h;cv.style.width=(w*scale)+'px';cv.style.height=(h*scale)+'px';
+  const x=cv.getContext('2d');x.clearRect(0,0,w,h);
+  const p=Object.assign({},C,pal||{});
+  g.forEach((r,j)=>{[...r].forEach((ch,i)=>{if(ch!=='.'&&p[ch]){x.fillStyle=p[ch];x.fillRect(i,j,1,1)}})});
+}
+// crowd: five small players in a row
+S.crowd=(function(){const names=['alex','chris','arielle','lloyd','pam'];return names});
+function drawCrowd(cv,scale){
+  const g=S.player,w=10,h=g.length,ks=['alex','chris','arielle','lloyd','pam','clark','alicia'];
+  cv.width=ks.length*12;cv.height=h;cv.style.width=(cv.width*scale)+'px';cv.style.height=(h*scale)+'px';
+  const x=cv.getContext('2d');
+  ks.forEach((k,n)=>{const p=Object.assign({},C,PAL[k]);g.forEach((r,j)=>[...r].forEach((ch,i)=>{if(ch!=='.'&&p[ch]){x.fillStyle=p[ch];x.fillRect(n*12+i,j,1,1)}}))});
+}
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const anims=[];
+document.querySelectorAll('canvas[data-sprite]').forEach(cv=>{
+  const sp=cv.dataset.sprite,sc=+cv.dataset.scale||4,pal=PAL[cv.dataset.pal];
+  if(sp==='crowd'){drawCrowd(cv,sc);return}
+  draw(cv,sp,pal,sc);
+  if(cv.dataset.anim==='run')anims.push({cv,pal,sc,f:0,type:'run'});
+  if(cv.dataset.anim==='float')anims.push({cv,f:0,type:'float'});
+});
+if(!reduce){setInterval(()=>{anims.forEach(a=>{a.f^=1;if(a.type==='run')draw(a.cv,a.f?'player2':'player',a.pal,a.sc);else a.cv.style.transform='translateY('+(a.f?-4:0)+'px)'})},260)}
+
+// mountains for BC track
+(function(){const cv=document.getElementById('mtn'),x=cv.getContext('2d');const W=200,H=70;x.imageSmoothingEnabled=false;
+  const peaks=[[0,40],[18,18],[34,36],[52,10],[70,30],[88,14],[108,34],[126,8],[146,28],[164,16],[184,32],[200,22]];
+  for(let i=0;i<W;i+=2){let y=H;for(let k=0;k<peaks.length-1;k++){const[a,ya]=peaks[k],[b,yb]=peaks[k+1];if(i>=a&&i<=b){y=ya+(yb-ya)*(i-a)/(b-a)}}
+    y=Math.round(y/2)*2;x.fillStyle='#3a3f7a';x.fillRect(i,y,2,H-y);if(y<20){x.fillStyle='#f3f0ff';x.fillRect(i,y,2,4)}}
+  cv.style.imageRendering='pixelated';
+})();
+
+// players
+const P=[
+ {k:'alex',n:'Alex',cls:'The Head Coach',item:'star',win:'5:58 at Ironman 70.3 Victoria, beating his sub-6 goal. Ten weeks later he hosted the first TTF Triathlon, then ran his first 50 km ultra with Nick in 7 hours. Longest posting streak in the server: 139 days.',q:'"It\'s been a big year of misogi for me: moving to Colombia, taking Type Two Fun public with Nick and Clark, the 70.3, and now hosting a tri."',st:[1668,304,139]},
+ {k:'lloyd',n:'Lloyd',cls:'The Original Warden',item:'dumbbell',win:'Ran every kilometre of Clark\'s first marathon beside him. Swam 6 km, double his longest ever. Deadlifted 390 × 7, finished the TTF Triathlon, and became a dad to Sam.',q:'"I\'m too weak to be this slow and too fat to be this weak."',st:[1666,275,77]},
+ {k:'clark',n:'Clark',cls:'Most Likely to Make a Countdown',item:'ring',win:'Went from 5 km runs to his first marathon in 117 days. Finished the 4,000-rep Warden\'s Challenge and the TTF Triathlon. Learned Spanish for Lorena\'s family, then married her on Aug 22.',q:'"Literally everyone from Kamloops winter arc came out to support. I\'m so heckin\' grateful for all of you."',st:[1088,275,55]},
+ {k:'chris',n:'Chris',cls:'The Engine',item:'shoe',win:'A 1:33:21 half-marathon PR, then 3:18:44 in Kelowna, a 10-minute marathon PR. Carried Run Across BC with 230 km and finished the TTF Triathlon.',q:'"Nutrition is the secret 4th sport of the triathlon."',st:[1031,274,40]},
+ {k:'nick',n:'Nick',cls:'Grip Strength Champion',item:'medal',win:'Took TTF public with Alex and co-hosted the TTF Triathlon, then finished it. Won Challenge #001, ran his first 50 km ultra in 7 hours, trained for an Ironman, and became a dad to Wil.',q:'"That\'s on CONSISTENCY BABY. Because of this crew."',st:[1062,258,33]},
+ {k:'eric',n:'Eric',cls:'Mr. Consistency',item:'flame',win:'A 90-day posting streak, second-longest in the server. Squatted 275 × 4, did a 5 km weighted ruck up and down First Ave, and ran his first trail race.',q:'"Shit was simply hard."',st:[690,201,90]},
+ {k:'arielle',n:'Arielle',cls:'Says Yes to Bad Ideas',item:'lightning',win:'The life force of Type Two Fun. Behind the scenes she backs Alex and Nick with support and advice, and she volunteered at the TTF Triathlon. Also: top female in Run Across BC with 75.6 km, then a 25 km Spartan Beast.',q:'"This challenge sounds terrible, naturally I am in."',st:[618,227,35]},
+ {k:'ben',n:'Ben',cls:'Silent Assassin',item:'moon',win:'Became a dad to Ronan in October. Ben doesn\'t say much in his check-ins, but the work always gets done. Posted on 289 days, hit 43 bodyweight squats in 5 minutes, and set multiple 5 km and 10 km PBs.',q:'"Ran a pb due to the shits."',st:[436,289,34]},
+ {k:'captrick',n:'CaptRick',cls:'Most Disciplined',item:'medal',win:'Serves in the military and lives and breathes hard things. He gets it done and commands his troops well. This year he passed his course, started a new job, dropped 20 lbs and ran a 19:49 5 km.',q:'"Win some lose most."',st:[369,195,26]},
+ {k:'chantal',n:'Chantal',cls:'Warden\'s Worst Nightmare',item:'lightning',win:'Showed up through her first year postpartum, her son\'s surgery, a new job and two dogs. Served every 16k-step punishment.',q:'"Can we punish the Warden for forgetting to punish us?"',st:[362,219,18]},
+ {k:'lorena',n:'Lorena',cls:'Fastest Fins in TTF',item:'wave',win:'Swam the swim leg of the Vancouver Relay Triathlon at an amazing pace. Presented her thesis proposal, went Spanish-only with Clark, and got married on Aug 22.',q:'"Even if they felt small at times, each task made me feel better about myself."',st:[177,86,10]},
+ {k:'pam',n:'Pam',cls:'Hydration Hall of Fame',item:'drop',win:'Gave birth to Wil, an incredible feat. Kept checking in from the newborn trenches, took Wil on his first trip to cheer at the 70.3, and is now building a UGC presence on Instagram.',q:'"First 24oz bottle by 9 AM, second by 12, third by 3, fourth by 6 ish, and fifth by 9 PM."',st:[192,138,18]},
+ {k:'alicia',n:'Alicia',cls:'Punishment Completionist',item:'check',win:'Ran 68 km in Run Across BC, survived No Shopping April, and turned a missed-swim punishment into an open-water swim. She also dreamed up the phone hand-off video.',q:'"I was only a liddle afraid of the monsters in the lake."',st:[153,105,17]}
+];
+const MAX=[1668,304,139];
+const grid=document.getElementById('grid');
+P.forEach((p,i)=>{const b=document.createElement('button');b.className='pl';b.type='button';b.id='pl-'+p.k;b.setAttribute('aria-label','Open '+p.n+"'s card");
+  const cv=document.createElement('canvas');cv.className='px';draw(cv,'player',PAL[p.k],3);b.appendChild(cv);
+  const s=document.createElement('span');s.textContent=p.n;b.appendChild(s);b.addEventListener('click',e=>{e.stopPropagation();openCard(i)});grid.appendChild(b)});
+for(let i=0;i<3;i++){const b=document.createElement('button');b.className='pl locked';b.type='button';b.id='pl-lock'+i;b.setAttribute('aria-label','Locked player slot for 2027');
+  const cv=document.createElement('canvas');cv.className='px';draw(cv,'lock',null,4);b.appendChild(cv);const s=document.createElement('span');s.textContent='2027';b.appendChild(s);
+  b.addEventListener('click',e=>e.stopPropagation());grid.appendChild(b)}
+
+const card=document.getElementById('card');
+function openCard(i){const p=P[i];draw(document.getElementById('cSprite'),'player',PAL[p.k],7);
+  document.getElementById('cName').textContent=p.n.toUpperCase();document.getElementById('cClass').textContent=p.cls;
+  document.getElementById('cWin').textContent=p.win;document.getElementById('cQuote').textContent=p.q;
+  const box=document.getElementById('cStats');box.querySelectorAll('.sbar').forEach(n=>n.remove());
+  [['Messages',0],['Days posted',1],['Best streak',2]].forEach(([l,j])=>{const r=document.createElement('div');r.className='sbar';
+    r.innerHTML='<span>'+l+'</span><div><i style="width:'+Math.max(4,Math.round(p.st[j]/MAX[j]*100))+'%"></i></div><b>'+p.st[j].toLocaleString('en-US')+'</b>';box.appendChild(r)});
+  card.hidden=false;document.getElementById('cBack').focus();}
+function closeCard(){card.hidden=true;}
+document.getElementById('cBack').addEventListener('click',e=>{e.stopPropagation();closeCard()});
+
+// navigation
+const slides=[...document.querySelectorAll('.slide')],N=slides.length;
+const bars=document.getElementById('bars');slides.forEach(()=>{const s=document.createElement('span');s.appendChild(document.createElement('i'));bars.appendChild(s)});
+document.getElementById('tot').textContent=String(N).padStart(2,'0');
+let cur=0,countTimer=null;
+function countUp(el){const end=+el.dataset.count;if(reduce||!end)return;let t0=null;const fmt=v=>Math.round(v).toLocaleString('en-US');
+  function step(ts){if(!t0)t0=ts;const k=Math.min(1,(ts-t0)/900);el.textContent=fmt(end*k);if(k<1)requestAnimationFrame(step)}requestAnimationFrame(step)}
+function go(n){n=Math.max(0,Math.min(N-1,n));if(n===cur&&slides[cur].classList.contains('on')&&n!==0)return;
+  closeCard();slides[cur].classList.remove('on');cur=n;const s=slides[cur];s.classList.add('on');s.scrollTop=0;
+  [...bars.children].forEach((b,i)=>{b.className=i<cur?'done':i===cur?'on':''});
+  document.getElementById('lvl').textContent=String(cur+1).padStart(2,'0');
+  document.getElementById('prev').disabled=cur===0;document.getElementById('next').disabled=cur===N-1;
+  s.querySelectorAll('[data-count]').forEach(countUp);
+  if(cur===6){const m=document.getElementById('meter'),r=document.querySelector('#track .runner');
+    if(!reduce){m.style.transition='none';m.style.width='0';r.style.transition='none';r.style.left='0';void m.offsetWidth;m.style.transition='';r.style.transition='';}
+    requestAnimationFrame(()=>{m.style.width='100%';r.style.left='calc(100% - 36px)'})}
+  clearInterval(countTimer);
+  if(cur===N-1){const c=document.getElementById('count');let v=10;c.textContent=v;if(!reduce)countTimer=setInterval(()=>{v=v>0?v-1:10;c.textContent=v},1000)}
+}
+document.getElementById('prev').addEventListener('click',e=>{e.stopPropagation();go(cur-1)});
+document.getElementById('next').addEventListener('click',e=>{e.stopPropagation();go(cur+1)});
+document.getElementById('stage').addEventListener('click',e=>{if(e.target.closest('button,a'))return;const r=e.currentTarget.getBoundingClientRect();
+  if(cur===13)return; (e.clientX-r.left)<r.width*0.3?go(cur-1):go(cur+1)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!card.hidden){closeCard();return}
+  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();go(cur+1)}else if(e.key==='ArrowLeft'){go(cur-1)}});
+let sx=null;document.getElementById('stage').addEventListener('touchstart',e=>{sx=e.touches[0].clientX},{passive:true});
+document.getElementById('stage').addEventListener('touchend',e=>{if(sx===null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>50){go(dx<0?cur+1:cur-1)}},{passive:true});
+go(0);
+// final run state for the static frame of the BC slide
+document.getElementById('meter').style.width='100%';
+})();
+</script>
+</body>
+</html>
